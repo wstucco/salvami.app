@@ -24,7 +24,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
-    // python + ffmpeg are ~30 MB per ABI: build one APK per architecture instead of a fat one.
+    // python is ~14 MB per ABI: build one APK per architecture instead of a fat one.
     splits {
         abi {
             isEnable = true
@@ -46,7 +46,7 @@ android {
         )
     }
     buildFeatures { compose = true }
-    // yt-dlp / python / ffmpeg ship as native libs that must be extracted to disk.
+    // yt-dlp / python ship as native libs that must be extracted to disk.
     packaging { jniLibs { useLegacyPackaging = true } }
 }
 
@@ -64,5 +64,4 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.5.1")
     implementation("androidx.media3:media3-ui:1.5.1")
     implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
-    implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
 }

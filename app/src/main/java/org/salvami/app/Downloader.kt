@@ -42,6 +42,7 @@ object Downloader {
                 // The service may outlive a day; downloads run one at a time, so this is a safe spot.
                 App.updateYtDlpIfDue(ctx)
                 ytError = ytDlp(url, tmp, jobId, photos = false, onProgress)
+                if (!DownloadService.isCancelled(jobId)) Muxer.finish(tmp)
                 // Photos come as the entries' thumbnails, at full resolution. Ask for them in a second
                 // pass only when needed, or every video would also bring along its cover image.
                 if (ytError != null && NO_VIDEO.containsMatchIn(ytError.message.orEmpty()) && !DownloadService.isCancelled(jobId)) {
@@ -100,7 +101,10 @@ object Downloader {
             req.addOption("--skip-download")
             req.addOption("--write-thumbnail")
         } else {
-            req.addOption("-S", "ext:mp4:m4a")
+            // No ffmpeg: Muxer merges the streams, which needs MP4+M4A (or WebM+WebM).
+            // H.264 first, as AV1/VP9 do not decode in hardware on many phones.
+            req.addOption("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*[ext=webm]+ba[ext=webm]/b")
+            req.addOption("-S", "vcodec:h264,res,acodec:aac")
         }
         return try {
             YoutubeDL.getInstance().execute(req, jobId) { percent, _, _ -> onProgress((percent / 100f).coerceIn(0f, 1f)) }

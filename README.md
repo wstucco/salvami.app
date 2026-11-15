@@ -67,10 +67,11 @@ non serve alcun permesso di archiviazione, e vengono rimossi disinstallando l'ap
 
 - Funziona con i **contenuti pubblici**. Non c'è login: storie, profili privati e contenuti che
   richiedono un account non si scaricano.
-- yt-dlp è pensato per i video: i **post con sole foto** di alcuni social possono non riuscire.
-  In quel caso l'app prova a prendere l'immagine di anteprima della pagina, che può essere a risoluzione ridotta.
-- I siti cambiano spesso: quando i download iniziano a fallire, usa *Impostazioni → Aggiorna yt-dlp*.
-- L'APK è grande (Python, yt-dlp e FFmpeg sono inclusi) e il primo avvio richiede qualche secondo per estrarli.
+- I **post con sole foto** (anche i caroselli Instagram) vengono salvati alla risoluzione originale.
+  Per i siti che yt-dlp non conosce, l'app prova a prendere l'immagine di anteprima della pagina.
+- I siti cambiano spesso: l'app aggiorna yt-dlp da sola una volta al giorno; si può forzare da *Impostazioni → Aggiorna yt-dlp*.
+- FFmpeg non è incluso: audio e video separati vengono uniti con le API di Android (`MediaMuxer`), senza ricodifica.
+  L'APK (circa 20 MB per architettura) contiene Python e yt-dlp; il primo avvio richiede qualche secondo per estrarli.
 
 ## Uso responsabile
 

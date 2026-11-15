@@ -6,7 +6,6 @@ import android.util.Log
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.VideoFrameDecoder
-import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import kotlinx.coroutines.CompletableDeferred
 import java.io.File
@@ -45,12 +44,11 @@ class App : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         Library.init(this)
-        // The first run unpacks Python + yt-dlp + ffmpeg: keep it off the main thread.
+        // The first run unpacks Python + yt-dlp: keep it off the main thread.
         thread(name = "yt-init") {
             try {
                 dropStaleYtDlp()
                 YoutubeDL.getInstance().init(this)
-                FFmpeg.getInstance().init(this)
                 updateYtDlpIfDue(this)
                 ytReady.complete(null)
             } catch (e: Throwable) {
