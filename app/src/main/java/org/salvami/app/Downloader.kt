@@ -142,6 +142,8 @@ object Downloader {
         req.addOption("--playlist-end", "30")
         req.addOption("--write-info-json")
         req.addOption("--no-mtime")
+        // Signed-in session for stories and private posts; yt-dlp also writes refreshed cookies back.
+        Accounts.cookieFile(url)?.let { req.addOption("--cookies", it.absolutePath) }
         if (photos) {
             req.addOption("--ignore-no-formats-error")
             req.addOption("--skip-download")

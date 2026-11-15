@@ -44,6 +44,7 @@ class App : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         Library.init(this)
+        Accounts.init(this)
         // The first run unpacks Python + yt-dlp: keep it off the main thread.
         thread(name = "yt-init") {
             try {
