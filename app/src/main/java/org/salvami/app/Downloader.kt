@@ -65,8 +65,11 @@ object Downloader {
             }
 
             val host = runCatching { Uri.parse(url).host.orEmpty().removePrefix("www.") }.getOrDefault("")
-            return files.sortedBy { it.name }.map { f ->
-                val info = runCatching { JSONObject(File(tmp, f.nameWithoutExtension + ".info.json").readText()) }.getOrNull()
+            val infos = files.associateWith { f -> runCatching { JSONObject(File(tmp, f.nameWithoutExtension + ".info.json").readText()) }.getOrNull() }
+            // Keep the order of the post (playlist_index), not the alphabetical one of the file names.
+            val ordered = files.sortedWith(compareBy<File> { infos[it]?.optInt("playlist_index", Int.MAX_VALUE) ?: Int.MAX_VALUE }.thenBy { it.name })
+            val items = ordered.map { f ->
+                val info = infos[f]
                 fun s(vararg keys: String) = keys.firstNotNullOfOrNull { k -> info?.optString(k)?.takeIf { it.isNotBlank() && it != "null" } }
                 val dest = Library.freshFile(f.name)
                 if (!f.renameTo(dest)) { f.copyTo(dest, overwrite = true); f.delete() }
@@ -80,6 +83,7 @@ object Downloader {
                         .let { if (dest.extension.lowercase() in IMAGE_EXT) it.replaceFirst(Regex("^Video by "), "Post by ") else it },
                 )
             }
+            return if (items.size < 2) items else items.mapIndexed { i, item -> item.copy(group = jobId, position = i) }
         } finally {
             tmp.deleteRecursively()
         }

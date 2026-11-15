@@ -30,6 +30,7 @@
     <string name="queued">Added to downloads</string>
     <string name="import_local">Import from device</string>
     <string name="imported_n">Imported: %d</string>
+    <string name="group_posts">Group posts</string>
     <string name="bigger_tiles">Bigger tiles</string>
     <string name="smaller_tiles">Smaller tiles</string>
     <string name="sort_newest">Newest first</string>

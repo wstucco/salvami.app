@@ -29,6 +29,7 @@
     <string name="queued">Aggiunto ai download</string>
     <string name="import_local">Importa dal dispositivo</string>
     <string name="imported_n">Importati: %d</string>
+    <string name="group_posts">Raggruppa post</string>
     <string name="bigger_tiles">Miniature più grandi</string>
     <string name="smaller_tiles">Miniature più piccole</string>
     <string name="sort_newest">Più recenti</string>

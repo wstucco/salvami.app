@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -25,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
@@ -86,6 +90,12 @@ private enum class Kind(val label: Int) {
     PHOTOS(R.string.filter_photos), MEMOS(R.string.filter_memos)
 }
 
+/** One grid cell: a single item, or every item of a post downloaded together. */
+private class Tile(val items: List<MediaItem>) {
+    val cover get() = items.first()
+    val key get() = cover.group.ifEmpty { cover.id }
+}
+
 @Composable
 fun GalleryScreen(state: LibState, onOpen: (ids: List<String>, index: Int) -> Unit) {
     val ctx = LocalContext.current
@@ -94,6 +104,7 @@ fun GalleryScreen(state: LibState, onOpen: (ids: List<String>, index: Int) -> Un
     val prefs = remember { ctx.getSharedPreferences("ui", Context.MODE_PRIVATE) }
 
     var columns by remember { mutableIntStateOf(prefs.getInt("columns", 3).coerceIn(2, 6)) }
+    var grouped by remember { mutableStateOf(prefs.getBoolean("grouped", true)) }
     var sort by remember { mutableStateOf(Sort.entries[prefs.getInt("sort", 0).coerceIn(0, Sort.entries.size - 1)]) }
     var kind by rememberSaveable { mutableStateOf(Kind.ALL) }
     var tagFilter by rememberSaveable { mutableStateOf<String?>(null) }
@@ -133,10 +144,24 @@ fun GalleryScreen(state: LibState, onOpen: (ids: List<String>, index: Int) -> Un
                 }
             }
     }
+    // A post shows up where its first matching item would, and always opens whole.
+    val tiles = remember(shown, state.items, grouped) {
+        if (!grouped) return@remember shown.map { Tile(listOf(it)) }
+        val posts = state.items.filter { it.group.isNotEmpty() }.groupBy { it.group }.mapValues { (_, v) -> v.sortedBy { it.position } }
+        val seen = HashSet<String>()
+        shown.mapNotNull { item ->
+            when {
+                item.group.isEmpty() -> Tile(listOf(item))
+                seen.add(item.group) -> Tile(posts.getValue(item.group))
+                else -> null
+            }
+        }
+    }
+    val visible = remember(tiles) { tiles.flatMap { it.items } }
     // Drop selections of items that no longer exist or are filtered out.
-    val shownIds = remember(shown) { shown.map { it.id } }
+    val shownIds = remember(visible) { visible.map { it.id } }
     val selection = selected.intersect(shownIds.toSet())
-    val selectedItems = shown.filter { it.id in selection }
+    val selectedItems = visible.filter { it.id in selection }
 
     val importMsg = stringResource(R.string.imported_n)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
@@ -203,6 +228,10 @@ fun GalleryScreen(state: LibState, onOpen: (ids: List<String>, index: Int) -> Un
                                 text = { Text(stringResource(R.string.smaller_tiles)) }, enabled = columns < 6,
                                 onClick = { columns++; prefs.edit().putInt("columns", columns).apply() },
                             )
+                            DropdownMenuItem(
+                                text = { Text((if (grouped) "✓ " else "") + stringResource(R.string.group_posts)) },
+                                onClick = { grouped = !grouped; prefs.edit().putBoolean("grouped", grouped).apply(); menuOpen = false },
+                            )
                             HorizontalDivider()
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.import_local)) },
@@ -253,17 +282,22 @@ fun GalleryScreen(state: LibState, onOpen: (ids: List<String>, index: Int) -> Un
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    items(shown, key = { it.id }) { item ->
-                        val isSelected = item.id in selection
+                    items(tiles, key = { it.key }) { tile ->
+                        val item = tile.cover
+                        val ids = tile.items.map { it.id }
+                        val isSelected = ids.all { it in selection }
                         Box(
                             Modifier.aspectRatio(1f).clip(RoundedCornerShape(6.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .combinedClickable(
                                     onClick = {
-                                        if (selection.isNotEmpty()) selected = if (isSelected) selection - item.id else selection + item.id
-                                        else onOpen(shownIds, shownIds.indexOf(item.id))
+                                        when {
+                                            selection.isNotEmpty() -> selected = if (isSelected) selection - ids.toSet() else selection + ids
+                                            tile.items.size > 1 -> onOpen(ids, 0)
+                                            else -> onOpen(shownIds, shownIds.indexOf(item.id))
+                                        }
                                     },
-                                    onLongClick = { selected = selection + item.id },
+                                    onLongClick = { selected = selection + ids },
                                 )
                         ) {
                             AsyncImage(
@@ -271,7 +305,19 @@ fun GalleryScreen(state: LibState, onOpen: (ids: List<String>, index: Int) -> Un
                                 contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize(),
                             )
                             if (item.video) Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.align(Alignment.BottomStart).padding(4.dp))
-                            if (item.favorite) Icon(Icons.Default.Favorite, null, tint = Color.White, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(16.dp))
+                            if (tile.items.any { it.favorite }) Icon(Icons.Default.Favorite, null, tint = Color.White, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(16.dp))
+                            if (tile.items.size > 1) {
+                                Row(
+                                    Modifier.align(Alignment.BottomEnd).padding(4.dp)
+                                        .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(50))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(Icons.Default.Collections, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(3.dp))
+                                    Text(tile.items.size.toString(), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
                             if (isSelected) {
                                 Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)))
                                 Icon(Icons.Default.CheckCircle, null, tint = Color.White, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))

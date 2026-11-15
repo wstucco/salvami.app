@@ -100,6 +100,9 @@ fun DetailScreen(state: LibState, ids: List<String>, start: Int, onClose: () -> 
                         val sub = listOf(current.username, current.platform).filter { it.isNotBlank() }.joinToString(" · ")
                         if (sub.isNotEmpty()) Text(sub, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
                     }
+                    // Position inside a post, as on Instagram ("2/5").
+                    val post = items.filter { current.group.isNotEmpty() && it.group == current.group }
+                    if (post.size > 1) Text("${post.indexOf(current) + 1}/${post.size}", style = MaterialTheme.typography.labelLarge)
                     IconButton(onClick = { infoDialog = true }) { Icon(Icons.Default.Info, stringResource(R.string.details)) }
                 }
             }

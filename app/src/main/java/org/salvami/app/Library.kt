@@ -29,6 +29,10 @@ data class MediaItem(
     val favorite: Boolean = false,
     val memo: String = "",
     val tags: List<String> = emptyList(),
+    /** Id of the download that brought several items at once (a carousel, a multi-photo post); "" when alone. */
+    val group: String = "",
+    /** Order inside [group], as in the original post. */
+    val position: Int = 0,
 )
 
 data class DownloadEntry(
@@ -156,6 +160,7 @@ object Library {
                     put("platform", i.platform); put("username", i.username); put("title", i.title)
                     put("size", i.size); put("width", i.width); put("height", i.height); put("savedAt", i.savedAt)
                     put("favorite", i.favorite); put("memo", i.memo); put("tags", JSONArray(i.tags))
+                    if (i.group.isNotEmpty()) { put("group", i.group); put("position", i.position) }
                 })
             }
         })
@@ -187,6 +192,7 @@ object Library {
                     size = j.optLong("size"), width = j.optInt("width"), height = j.optInt("height"),
                     savedAt = j.optLong("savedAt"), favorite = j.optBoolean("favorite"), memo = j.optString("memo"),
                     tags = if (tags == null) emptyList() else (0 until tags.length()).map { tags.getString(it) },
+                    group = j.optString("group"), position = j.optInt("position"),
                 )
             },
             tags = arr("tags") { j -> Tag(j.getString("id"), j.getString("name"), j.getLong("color")) },
