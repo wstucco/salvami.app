@@ -57,6 +57,14 @@
     <string name="phase_preparing">Analisi del link…</string>
     <string name="phase_downloading">Download %1$d%%</string>
     <string name="phase_processing">Elaborazione…</string>
+    <string name="accounts">Account</string>
+    <string name="accounts_help">Accedi per salvare storie, profili privati che segui e post con limiti di età. La password va solo al sito; la sessione resta sul telefono e non entra mai nei backup. I siti possono limitare gli account che scaricano molto: un account secondario è più sicuro.</string>
+    <string name="signed_in">Connesso</string>
+    <string name="signed_out">Non connesso</string>
+    <string name="sign_in">Accedi</string>
+    <string name="sign_out">Esci</string>
+    <string name="sign_in_to">Accedi a %1$s</string>
+    <string name="signed_in_to">Connesso a %1$s</string>
     <string name="status_pending">In coda</string>
     <string name="status_completed_n">Completato (%d)</string>
     <string name="status_failed">Non riuscito</string>

@@ -58,6 +58,14 @@
     <string name="phase_preparing">Analyzing link…</string>
     <string name="phase_downloading">Downloading %1$d%%</string>
     <string name="phase_processing">Finishing…</string>
+    <string name="accounts">Accounts</string>
+    <string name="accounts_help">Sign in to save stories, private profiles you follow and age-restricted posts. Your password goes only to the site; the session stays on this phone and is never included in backups. Sites may restrict accounts that download a lot: a secondary account is safer.</string>
+    <string name="signed_in">Signed in</string>
+    <string name="signed_out">Not signed in</string>
+    <string name="sign_in">Sign in</string>
+    <string name="sign_out">Sign out</string>
+    <string name="sign_in_to">Sign in to %1$s</string>
+    <string name="signed_in_to">Signed in to %1$s</string>
     <string name="status_pending">Queued</string>
     <string name="status_completed_n">Completed (%d)</string>
     <string name="status_failed">Failed</string>

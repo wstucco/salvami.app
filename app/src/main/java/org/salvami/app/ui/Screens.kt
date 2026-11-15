@@ -48,13 +48,16 @@ import com.yausername.youtubedl_android.YoutubeDL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.salvami.app.Accounts
 import org.salvami.app.App
 import org.salvami.app.Backup
 import org.salvami.app.DownloadService
 import org.salvami.app.LibState
+import org.salvami.app.LoginActivity
 import org.salvami.app.Progress
 import org.salvami.app.Library
 import org.salvami.app.R
+import org.salvami.app.Site
 import org.salvami.app.Status
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -127,6 +130,7 @@ fun SettingsScreen(state: LibState) {
     var busy by remember { mutableStateOf(false) }
     var ytStatus by remember { mutableStateOf("") }
     var tagToDelete by remember { mutableStateOf<String?>(null) }
+    val signedIn by Accounts.signedIn.collectAsState()
 
     val exported = stringResource(R.string.exported_n)
     val restored = stringResource(R.string.restored_n)
@@ -166,6 +170,25 @@ fun SettingsScreen(state: LibState) {
                 }) { Text(stringResource(R.string.export_backup)) }
                 OutlinedButton(enabled = !busy, onClick = { restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }) {
                     Text(stringResource(R.string.restore_backup))
+                }
+            }
+            HorizontalDivider()
+
+            Text(stringResource(R.string.accounts), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.accounts_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Site.entries.forEach { site ->
+                val on = site in signedIn
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(site.label)
+                        Text(
+                            stringResource(if (on) R.string.signed_in else R.string.signed_out),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (on) OutlinedButton(onClick = { Accounts.signOut(site) }) { Text(stringResource(R.string.sign_out)) }
+                    else Button(onClick = { LoginActivity.start(ctx, site) }) { Text(stringResource(R.string.sign_in)) }
                 }
             }
             HorizontalDivider()

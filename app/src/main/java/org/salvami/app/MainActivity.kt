@@ -122,7 +122,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun SalvamiTheme(content: @Composable () -> Unit) {
+fun SalvamiTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
     val ctx = LocalContext.current
     val colors = when {
