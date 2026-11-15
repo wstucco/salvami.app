@@ -48,10 +48,12 @@ class App : Application(), ImageLoaderFactory {
         thread(name = "yt-init") {
             try {
                 dropStaleYtDlp()
+                repairPython()
                 YoutubeDL.getInstance().init(this)
                 updateYtDlpIfDue(this)
                 ytReady.complete(null)
             } catch (e: Throwable) {
+                Log.e("Salvami", "yt-dlp init failed", e)
                 ytReady.complete(e)
             }
         }
@@ -71,6 +73,16 @@ class App : Application(), ImageLoaderFactory {
             .remove("dlpVersion").remove("dlpVersionName").apply()
         // The bundled copy may be older than the one we had: check for updates right away.
         prefs.edit().putLong("installed", installed).remove("checked").apply()
+    }
+
+    /**
+     * The library records the Python zip as unpacked even when unpacking failed and left an empty
+     * dir, and then never retries. Forget that record when libpython is missing so it unpacks again.
+     */
+    private fun repairPython() {
+        val lib = File(noBackupFilesDir, "youtubedl-android/packages/python/usr/lib")
+        if (lib.list().orEmpty().any { it.startsWith("libpython3") }) return
+        getSharedPreferences("youtubedl-android", Context.MODE_PRIVATE).edit().remove("pythonLibVersion").apply()
     }
 
     // Thumbnails for videos as well as images.
