@@ -1,14 +1,14 @@
 # Salvami
 
 App Android open source per **salvare foto e video dai link condivisi** in una galleria offline,
-con tag, preferiti, note, ricerca e backup. Nessun account, nessuna pubblicità, nessun tracciamento:
+con tag, preferiti, note, ricerca e backup. Nessuna pubblicità, nessun tracciamento:
 tutto resta sul dispositivo.
 
 Il download è affidato a [yt-dlp](https://github.com/yt-dlp/yt-dlp), incluso nell'app tramite
 [youtubedl-android](https://github.com/yausername/youtubedl-android), quindi funziona con i siti che yt-dlp supporta.
 
-> **Stato:** il codice non è ancora stato compilato né provato su un dispositivo
-> (vedi "Compilazione"). Consideralo una prima versione da verificare.
+> **Stato:** prima versione (0.1). Provata su Android 16 con Instagram, YouTube e HLS;
+> le storie Instagram attendono una correzione di yt-dlp.
 
 ## Funzioni
 
@@ -23,7 +23,10 @@ Il download è affidato a [yt-dlp](https://github.com/yt-dlp/yt-dlp), incluso ne
 - **Selezione multipla** (pressione lunga) per condividere, eliminare, mettere tra i preferiti o taggare in blocco
 - **Importa dal dispositivo** foto e video nella stessa galleria
 - **Apri con** un'altra app galleria / player
-- **Backup e ripristino**: un unico archivio `.zip` con media, tag, note e cronologia
+- **Profili**: condividendo il link di un profilo (Instagram, TikTok, X, YouTube, Facebook) lo si salva
+  in una sezione apposita, con nome e foto, invece di scaricarne i contenuti
+- **Account**: accesso dalla pagina di login del sito, per i contenuti privati; la sessione resta sul telefono
+- **Backup e ripristino**: un unico archivio `.zip` con media, tag, note, cronologia e profili
 - Tema chiaro/scuro di sistema (colori dinamici da Android 12), italiano e inglese
 
 ### Rispetto a SHARE2me, mancano
