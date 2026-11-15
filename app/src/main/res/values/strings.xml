@@ -55,6 +55,9 @@
     <string name="info_source">Source</string>
     <string name="clear_history">Clear</string>
     <string name="empty_history">No downloads yet</string>
+    <string name="phase_preparing">Analyzing link…</string>
+    <string name="phase_downloading">Downloading %1$d%%</string>
+    <string name="phase_processing">Finishing…</string>
     <string name="status_pending">Queued</string>
     <string name="status_completed_n">Completed (%d)</string>
     <string name="status_failed">Failed</string>

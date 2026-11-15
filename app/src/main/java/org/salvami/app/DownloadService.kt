@@ -33,8 +33,8 @@ class DownloadService : Service() {
         private const val EXTRA_ID = "id"
         private const val EXTRA_URL = "url"
 
-        /** Progress (0..1) of the running downloads, by history id. */
-        val progress = MutableStateFlow<Map<String, Float>>(emptyMap())
+        /** Progress of the running downloads, by history id. */
+        val progress = MutableStateFlow<Map<String, Progress>>(emptyMap())
         private val cancelled: MutableSet<String> = Collections.synchronizedSet(HashSet())
 
         fun isCancelled(id: String) = id in cancelled
@@ -79,7 +79,7 @@ class DownloadService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         lastStartId = startId
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0
-        ServiceCompat.startForeground(this, NOTIF_ID, notification(getString(R.string.downloading), -1), type)
+        ServiceCompat.startForeground(this, NOTIF_ID, notification(getString(R.string.downloading), "", -1), type)
         val id = intent?.getStringExtra(EXTRA_ID)
         val url = intent?.getStringExtra(EXTRA_URL)
         if (id != null && url != null) {
@@ -104,14 +104,14 @@ class DownloadService : Service() {
         }
         Library.setHistory(id, Status.RUNNING)
         val nm = getSystemService(NotificationManager::class.java)
-        var lastPercent = -1
+        var last: Pair<Progress.Phase, Int>? = null
         try {
             val items = Downloader.fetch(this, url, id) { p ->
                 progress.update { it + (id to p) }
-                val percent = (p * 100).toInt()
-                if (percent != lastPercent) {
-                    lastPercent = percent
-                    nm.notify(NOTIF_ID, notification(url, percent))
+                val percent = if (p.phase == Progress.Phase.DOWNLOADING) (p.fraction * 100).toInt() else -1
+                if (last != p.phase to percent) {
+                    last = p.phase to percent
+                    nm.notify(NOTIF_ID, notification(p.label(this), url, percent))
                 }
             }
             Library.addItems(items)
@@ -125,13 +125,13 @@ class DownloadService : Service() {
         }
     }
 
-    private fun notification(text: String, percent: Int): Notification {
+    private fun notification(title: String, text: String, percent: Int): Notification {
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_download)
-            .setContentTitle(getString(R.string.downloading))
+            .setContentTitle(title)
             .setContentText(text)
             .setOngoing(true)
             .setOnlyAlertOnce(true)

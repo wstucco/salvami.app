@@ -14,6 +14,46 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
 
+/** What a running download is doing; [fraction] (0..1, whole job) only counts while DOWNLOADING. */
+data class Progress(val phase: Phase, val fraction: Float = 0f) {
+    enum class Phase { PREPARING, DOWNLOADING, PROCESSING }
+
+    fun label(ctx: Context): String = when (phase) {
+        Phase.PREPARING -> ctx.getString(R.string.phase_preparing)
+        Phase.DOWNLOADING -> ctx.getString(R.string.phase_downloading, (fraction * 100).toInt())
+        Phase.PROCESSING -> ctx.getString(R.string.phase_processing)
+    }
+}
+
+/**
+ * Turns yt-dlp's per-file percentages into one figure for the whole job: a carousel downloads
+ * item after item ("Downloading item 2 of 5"), and a video may come as separate video and audio
+ * files ("Downloading 1 format(s): 133+140"), each going 0..100%. Never goes backwards.
+ */
+private class ProgressTracker(private val report: (Progress) -> Unit) {
+    private var item = 1
+    private var items = 1
+    private var file = 0
+    private var files = 1
+    private var best = 0f
+
+    fun line(line: String, percent: Float) {
+        ITEM.find(line)?.let { item = it.groupValues[1].toInt(); items = it.groupValues[2].toInt().coerceAtLeast(1); file = 0; files = 1 }
+        // "Downloading 1 format(s): 133+140" is one video file and one audio file.
+        FORMATS.find(line)?.let { m -> files = m.groupValues[1].split(',', '+').size }
+        if (line.startsWith("[download] Destination:")) file++
+        if (percent < 0 || file == 0) return
+        val done = (item - 1 + ((file - 1).coerceAtMost(files - 1) + percent / 100f) / files) / items
+        best = maxOf(best, done.coerceIn(0f, 1f))
+        report(Progress(Progress.Phase.DOWNLOADING, best))
+    }
+
+    private companion object {
+        val ITEM = Regex("""^\[download\] Downloading item (\d+) of (\d+)""")
+        val FORMATS = Regex("""Downloading \d+ format\(s\): (\S+)""")
+    }
+}
+
 object Downloader {
     private val VIDEO_EXT = setOf("mp4", "mkv", "webm", "mov", "m4v", "3gp", "avi", "flv")
     private val IMAGE_EXT = setOf("jpg", "jpeg", "png", "webp", "gif", "heic", "avif", "bmp")
@@ -34,14 +74,16 @@ object Downloader {
      * og:video / og:image are handled by a small fallback. og:image is only used when yt-dlp
      * says there is no video: for any other failure it is just a thumbnail of what we missed.
      */
-    suspend fun fetch(ctx: Context, url: String, jobId: String, onProgress: (Float) -> Unit): List<MediaItem> {
+    suspend fun fetch(ctx: Context, url: String, jobId: String, onProgress: (Progress) -> Unit): List<MediaItem> {
         val tmp = File(ctx.cacheDir, "job-$jobId").apply { deleteRecursively(); mkdirs() }
+        onProgress(Progress(Progress.Phase.PREPARING))
         try {
             var ytError: Throwable? = App.ytReady.await()
             if (ytError == null) {
                 // The service may outlive a day; downloads run one at a time, so this is a safe spot.
                 App.updateYtDlpIfDue(ctx)
                 ytError = ytDlp(url, tmp, jobId, photos = false, onProgress)
+                onProgress(Progress(Progress.Phase.PROCESSING))
                 if (!DownloadService.isCancelled(jobId)) Muxer.finish(tmp)
                 // Photos come as the entries' thumbnails, at full resolution. Ask for them in a second
                 // pass only when needed, or every video would also bring along its cover image.
@@ -92,7 +134,7 @@ object Downloader {
     private fun mediaIn(dir: File): List<File> = dir.listFiles()?.filter { it.isFile && isMedia(it) }.orEmpty()
 
     /** Runs yt-dlp into [dir]; with [photos] it saves each entry's thumbnail instead of the video. Returns the failure, if any. */
-    private fun ytDlp(url: String, dir: File, jobId: String, photos: Boolean, onProgress: (Float) -> Unit): Throwable? {
+    private fun ytDlp(url: String, dir: File, jobId: String, photos: Boolean, onProgress: (Progress) -> Unit): Throwable? {
         val req = YoutubeDLRequest(url)
         req.addOption("-o", "${dir.absolutePath}/%(title).60B [%(id)s].%(ext)s")
         req.addOption("--restrict-filenames")
@@ -111,7 +153,8 @@ object Downloader {
             req.addOption("-S", "vcodec:h264,res,acodec:aac")
         }
         return try {
-            YoutubeDL.getInstance().execute(req, jobId) { percent, _, _ -> onProgress((percent / 100f).coerceIn(0f, 1f)) }
+            val tracker = ProgressTracker(onProgress)
+            YoutubeDL.getInstance().execute(req, jobId) { percent, _, line -> tracker.line(line, percent) }
             null
         } catch (e: Throwable) {
             Log.w("Salvami", "yt-dlp failed for $url (photos=$photos)", e)

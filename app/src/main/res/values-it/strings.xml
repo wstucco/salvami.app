@@ -54,6 +54,9 @@
     <string name="info_source">Origine</string>
     <string name="clear_history">Svuota</string>
     <string name="empty_history">Ancora nessun download</string>
+    <string name="phase_preparing">Analisi del link…</string>
+    <string name="phase_downloading">Download %1$d%%</string>
+    <string name="phase_processing">Elaborazione…</string>
     <string name="status_pending">In coda</string>
     <string name="status_completed_n">Completato (%d)</string>
     <string name="status_failed">Non riuscito</string>

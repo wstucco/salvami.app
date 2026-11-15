@@ -52,6 +52,7 @@ import org.salvami.app.App
 import org.salvami.app.Backup
 import org.salvami.app.DownloadService
 import org.salvami.app.LibState
+import org.salvami.app.Progress
 import org.salvami.app.Library
 import org.salvami.app.R
 import org.salvami.app.Status
@@ -84,7 +85,7 @@ fun DownloadsScreen(state: LibState) {
                         Text(e.url, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                         val status = when (e.status) {
                             Status.PENDING -> stringResource(R.string.status_pending)
-                            Status.RUNNING -> stringResource(R.string.downloading)
+                            Status.RUNNING -> progress[e.id]?.label(ctx) ?: stringResource(R.string.downloading)
                             Status.COMPLETED -> stringResource(R.string.status_completed_n).format(e.count)
                             Status.FAILED -> stringResource(R.string.status_failed) + (if (e.message.isNotBlank()) ": ${e.message}" else "")
                         }
@@ -94,9 +95,10 @@ fun DownloadsScreen(state: LibState) {
                             color = if (e.status == Status.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         if (e.status == Status.RUNNING) {
+                            // Only the transfer has a percentage; analysing the link and merging do not.
                             val p = progress[e.id]
-                            if (p == null || p <= 0f) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 6.dp))
-                            else LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+                            if (p?.phase == Progress.Phase.DOWNLOADING) LinearProgressIndicator(progress = { p.fraction }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+                            else LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 6.dp))
                         }
                     }
                     when (e.status) {
