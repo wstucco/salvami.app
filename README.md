@@ -32,44 +32,67 @@ Il download è affidato a [yt-dlp](https://github.com/yt-dlp/yt-dlp), incluso ne
 ### Rispetto a SHARE2me, mancano
 
 - la "Floating Ball" che rileva i link copiati
-- la navigazione per username (storie, highlights, post di un profilo)
+- il download in blocco di storie, highlights e post di un profilo
 - la selezione multipla trascinando, il tema AMOLED, le altre lingue
+
+## Installazione
+
+Scarica dalla pagina [Releases](https://github.com/wstucco/salvami.app/releases) l'APK per il tuo telefono:
+`app-arm64-v8a-release.apk` va bene per quasi tutti i dispositivi recenti (`armeabi-v7a` per quelli
+più vecchi a 32 bit, `x86_64`/`x86` per emulatori e Chromebook). Gli aggiornamenti si installano sopra
+la versione precedente senza perdere la galleria.
 
 ## Compilazione
 
-Servono JDK 17+ e l'SDK Android (API 35); il modo più semplice è aprire la cartella con **Android Studio**.
-Da riga di comando:
+Servono JDK 21 (con [SDKMAN!](https://sdkman.io) basta `sdk env`, che legge `.sdkmanrc`) e l'SDK
+Android (API 35); in alternativa si apre la cartella con **Android Studio**. Da riga di comando:
 
 ```bash
 ./gradlew assembleDebug
-# APK: app/build/outputs/apk/debug/app-debug.apk
+# un APK per architettura in app/build/outputs/apk/debug/
 ```
 
-In alternativa, caricando il progetto su GitHub, il workflow `.github/workflows/build.yml`
-compila l'APK e lo allega come artifact a ogni push.
+Le build `release` sono ridotte con R8 e, senza le variabili di firma, firmate con la chiave di debug.
+Durante la build il task `stripPython` toglie dal Python incluso nella libreria i moduli che yt-dlp non usa.
 
-Se la compilazione segnala errori su `YoutubeDL.UpdateChannel` o `version(...)` in
-`ui/Screens.kt`, l'API della libreria è cambiata rispetto alla 0.17.4: sono le uniche due chiamate
-non essenziali e si possono adattare o rimuovere senza toccare il resto.
+### CI e release
+
+Il workflow `.github/workflows/build.yml` compila le APK `release` a ogni push su `main` e le allega
+come artifact. Con un tag `v*` pubblica anche una GitHub Release:
+
+```bash
+git tag -a v0.2.0 -m "Salvami 0.2.0" && git push origin v0.2.0
+```
+
+La versione deriva dai tag (`v0.1.0` → `0.1.0`, i commit successivi → `0.1.0-3-gabc1234`) e il
+`versionCode` dal numero di esecuzione del workflow. La firma usa i segreti del repository
+`SALVAMI_KEYSTORE_BASE64`, `SALVAMI_KEYSTORE_PASSWORD`, `SALVAMI_KEY_ALIAS` e `SALVAMI_KEY_PASSWORD`;
+la chiave va conservata con cura, perché senza di essa non si possono più pubblicare aggiornamenti installabili.
 
 ## Struttura
 
 | File | Ruolo |
 |---|---|
-| `Library.kt` | Modello dati e archivio: elementi, tag, cronologia in un solo `library.json` |
-| `Downloader.kt` | yt-dlp + ripiego per link diretti e pagine con `og:video` / `og:image`; importazione locale |
+| `App.kt` | Avvio: estrazione di Python e yt-dlp, aggiornamento giornaliero di yt-dlp |
+| `Library.kt` | Modello dati e archivio: elementi, tag, cronologia e profili in un solo `library.json` |
+| `Downloader.kt` | yt-dlp, avanzamento, ripiego per link diretti e pagine con `og:video` / `og:image`; importazione locale |
+| `Muxer.kt` | Unione di audio e video e conversione MPEG-TS → MP4 con `MediaMuxer`, al posto di FFmpeg |
 | `DownloadService.kt` | Servizio in primo piano con la coda dei download |
+| `Profiles.kt` | Riconoscimento dei link ai profili, nome e foto dall'anteprima della pagina |
+| `Accounts.kt`, `LoginActivity.kt` | Accesso ai siti in una WebView e cookie di sessione per yt-dlp |
 | `Backup.kt` | Esportazione e ripristino dell'archivio zip |
 | `MainActivity.kt` | Ricezione dei link condivisi, navigazione, tema |
-| `ui/Gallery.kt`, `ui/Detail.kt`, `ui/Screens.kt`, `ui/Common.kt` | Interfaccia in Jetpack Compose |
+| `ui/` | Interfaccia in Jetpack Compose: galleria, dettaglio, profili, download, impostazioni |
 
 I file scaricati stanno nella cartella privata dell'app (`Android/data/org.salvami.app/files/media`):
 non serve alcun permesso di archiviazione, e vengono rimossi disinstallando l'app (fai prima un backup).
 
 ## Limiti noti
 
-- Funziona con i **contenuti pubblici**. Non c'è login: storie, profili privati e contenuti che
-  richiedono un account non si scaricano.
+- Senza account si scaricano solo i **contenuti pubblici**. Dopo l'accesso (*Impostazioni → Account*)
+  funzionano anche i profili privati che segui e i contenuti con limiti di età; le **storie Instagram**
+  non funzionano ancora per un problema di yt-dlp, e arriveranno con un suo aggiornamento.
+- I **profili** vengono salvati come segnalibri: i loro post non si scaricano in blocco.
 - I **post con sole foto** (anche i caroselli Instagram) vengono salvati alla risoluzione originale.
   Per i siti che yt-dlp non conosce, l'app prova a prendere l'immagine di anteprima della pagina.
 - I siti cambiano spesso: l'app aggiorna yt-dlp da sola una volta al giorno; si può forzare da *Impostazioni → Aggiorna yt-dlp*.
