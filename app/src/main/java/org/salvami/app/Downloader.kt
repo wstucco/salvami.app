@@ -19,6 +19,8 @@ object Downloader {
     private val IMAGE_EXT = setOf("jpg", "jpeg", "png", "webp", "gif", "heic", "avif", "bmp")
     private const val UA = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36"
     private val URL_RE = Regex("""https?://[^\s<>"']+""")
+    /** yt-dlp errors after which the page's og:image is the real content (photo posts, unsupported sites). */
+    private val PAGE_IMAGE_OK = Regex("no video|unsupported url", RegexOption.IGNORE_CASE)
 
     fun firstUrl(text: String?): String? = text?.let { URL_RE.find(it)?.value }
 
@@ -27,7 +29,8 @@ object Downloader {
     /**
      * Downloads every media file behind [url] and returns the new library items.
      * yt-dlp does the heavy lifting; plain image/video links and pages exposing
-     * og:video / og:image are handled by a small fallback.
+     * og:video / og:image are handled by a small fallback. og:image is only used when yt-dlp
+     * says there is no video: for any other failure it is just a thumbnail of what we missed.
      */
     suspend fun fetch(ctx: Context, url: String, jobId: String, onProgress: (Float) -> Unit): List<MediaItem> {
         val tmp = File(ctx.cacheDir, "job-$jobId").apply { deleteRecursively(); mkdirs() }
@@ -55,8 +58,9 @@ object Downloader {
 
             var files: List<File> = tmp.listFiles()?.filter { it.isFile && isMedia(it) }.orEmpty()
             if (files.isEmpty()) {
-                val direct = runCatching { fallback(url, tmp) }.getOrNull()
-                if (direct == null) throw (ytError ?: IllegalStateException("No media found"))
+                val pageImage = ytError == null || PAGE_IMAGE_OK.containsMatchIn(ytError.message.orEmpty())
+                val direct = runCatching { fallback(url, tmp, pageImage) }.getOrNull()
+                if (direct == null) throw IllegalStateException(ytError?.let(::errorText) ?: "No media found")
                 files = listOf(direct)
             }
 
@@ -143,7 +147,14 @@ object Downloader {
         return c
     }
 
-    private fun fallback(url: String, dir: File, depth: Int = 0): File? {
+    /** yt-dlp output is mostly warnings; keep the ERROR lines that say what went wrong. */
+    private fun errorText(e: Throwable): String {
+        val msg = e.message.orEmpty()
+        return msg.lines().filter { it.startsWith("ERROR:") }.joinToString("\n").ifBlank { msg }
+            .removePrefix("ERROR: ").trim()
+    }
+
+    private fun fallback(url: String, dir: File, pageImage: Boolean, depth: Int = 0): File? {
         val c = open(url)
         try {
             if (c.responseCode !in 200..299) return null
@@ -170,11 +181,12 @@ object Downloader {
                 }
                 String(buf, 0, n)
             }
-            for (prop in listOf("og:video:secure_url", "og:video", "og:image")) {
+            val props = listOf("og:video:secure_url", "og:video") + if (pageImage) listOf("og:image") else emptyList()
+            for (prop in props) {
                 val m = Regex("""<meta[^>]+property=["']$prop["'][^>]+content=["']([^"']+)["']""").find(html)
                     ?: Regex("""<meta[^>]+content=["']([^"']+)["'][^>]+property=["']$prop["']""").find(html)
                 val target = m?.groupValues?.get(1)?.replace("&amp;", "&") ?: continue
-                fallback(URL(URL(url), target).toString(), dir, depth + 1)?.let { return it }
+                fallback(URL(URL(url), target).toString(), dir, pageImage, depth + 1)?.let { return it }
             }
             return null
         } finally {
