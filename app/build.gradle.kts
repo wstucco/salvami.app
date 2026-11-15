@@ -24,16 +24,26 @@ android {
         applicationId = "org.salvami.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        // CI passes the run number, so every published build can update the previous one.
+        versionCode = System.getenv("SALVAMI_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("SALVAMI_VERSION_NAME") ?: "1.0.0"
+    }
+    // Release signing comes from the environment (GitHub secrets in CI); without it, the debug key.
+    val keystore = System.getenv("SALVAMI_KEYSTORE")
+    signingConfigs {
+        if (keystore != null) create("release") {
+            storeFile = file(keystore)
+            storePassword = System.getenv("SALVAMI_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("SALVAMI_KEY_ALIAS")
+            keyPassword = System.getenv("SALVAMI_KEY_PASSWORD")
+        }
     }
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Sign with your own key for distribution; debug signing keeps `assembleRelease` installable for testing.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     // python is ~14 MB per ABI: build one APK per architecture instead of a fat one.
