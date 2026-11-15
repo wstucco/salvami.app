@@ -81,4 +81,10 @@
     <string name="update_engine">Update yt-dlp</string>
     <string name="up_to_date">Already up to date</string>
     <string name="about">Salvami is free software (GPL-3.0), built on yt-dlp. For personal use: download only content you have the right to save. Not affiliated with any platform.</string>
+    <string name="profiles">Profiles</string>
+    <string name="empty_profiles">No saved profiles.\n\nShare a profile link from Instagram, TikTok, X, YouTube or Facebook to keep it here.</string>
+    <string name="profile_saved">Profile saved</string>
+    <string name="open_profile">Open profile</string>
+    <string name="refresh">Refresh</string>
+    <string name="delete_profile_confirm">Remove %1$s from saved profiles?</string>
 </resources>

@@ -80,4 +80,10 @@
     <string name="update_engine">Aggiorna yt-dlp</string>
     <string name="up_to_date">Già aggiornato</string>
     <string name="about">Salvami è software libero (GPL-3.0), basato su yt-dlp. Per uso personale: scarica solo contenuti che hai il diritto di salvare. Non affiliato ad alcuna piattaforma.</string>
+    <string name="profiles">Profili</string>
+    <string name="empty_profiles">Nessun profilo salvato.\n\nCondividi il link di un profilo Instagram, TikTok, X, YouTube o Facebook per tenerlo qui.</string>
+    <string name="profile_saved">Profilo salvato</string>
+    <string name="open_profile">Apri profilo</string>
+    <string name="refresh">Aggiorna</string>
+    <string name="delete_profile_confirm">Rimuovere %1$s dai profili salvati?</string>
 </resources>

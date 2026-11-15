@@ -48,6 +48,7 @@ data class LibState(
     val items: List<MediaItem> = emptyList(),
     val tags: List<Tag> = emptyList(),
     val history: List<DownloadEntry> = emptyList(),
+    val profiles: List<Profile> = emptyList(),
 )
 
 /** The whole library lives in memory and is persisted as one JSON file. */
@@ -58,6 +59,8 @@ object Library {
     private var file: File? = null
     lateinit var mediaDir: File
         private set
+    lateinit var avatarDir: File
+        private set
     private val io = Executors.newSingleThreadExecutor()
 
     val tagColors = listOf(0xFFE5484D, 0xFFF76B15, 0xFFFFC53D, 0xFF46A758, 0xFF12A594, 0xFF0090FF, 0xFF6E56CF, 0xFFE93D82)
@@ -66,6 +69,7 @@ object Library {
     fun init(ctx: Context) {
         if (file != null) return
         mediaDir = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "media").apply { mkdirs() }
+        avatarDir = File(mediaDir.parentFile, "avatars").apply { mkdirs() }
         val f = File(ctx.filesDir, "library.json")
         file = f
         val loaded = runCatching { fromJson(JSONObject(f.readText())) }.getOrDefault(LibState())
@@ -150,6 +154,14 @@ object Library {
         s.copy(history = s.history.filter { it.status == Status.PENDING || it.status == Status.RUNNING })
     }
 
+    // ── profiles ──
+    fun addProfile(p: Profile) = update { it.copy(profiles = listOf(p) + it.profiles) }
+
+    fun updateProfile(id: String, f: (Profile) -> Profile) =
+        update { s -> s.copy(profiles = s.profiles.map { if (it.id == id) f(it) else it }) }
+
+    fun deleteProfiles(ids: Set<String>) = update { s -> s.copy(profiles = s.profiles.filterNot { it.id in ids }) }
+
     // ── JSON ──
     fun toJson(s: LibState): JSONObject = JSONObject().apply {
         put("version", 1)
@@ -172,6 +184,14 @@ object Library {
                 put(JSONObject().apply {
                     put("id", h.id); put("url", h.url); put("status", h.status.name)
                     put("message", h.message); put("time", h.time); put("count", h.count)
+                })
+            }
+        })
+        put("profiles", JSONArray().apply {
+            s.profiles.forEach { p ->
+                put(JSONObject().apply {
+                    put("id", p.id); put("url", p.url); put("platform", p.platform); put("handle", p.handle)
+                    put("name", p.name); put("avatar", p.avatar); put("savedAt", p.savedAt)
                 })
             }
         })
@@ -201,6 +221,13 @@ object Library {
                     j.getString("id"), j.optString("url"),
                     runCatching { Status.valueOf(j.optString("status")) }.getOrDefault(Status.FAILED),
                     j.optString("message"), j.optLong("time"), j.optInt("count"),
+                )
+            },
+            profiles = arr("profiles") { j ->
+                Profile(
+                    id = j.getString("id"), url = j.getString("url"), platform = j.optString("platform"),
+                    handle = j.optString("handle"), name = j.optString("name"), avatar = j.optString("avatar"),
+                    savedAt = j.optLong("savedAt"),
                 )
             },
         )

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
@@ -42,11 +43,12 @@ import androidx.compose.ui.res.stringResource
 import org.salvami.app.ui.DetailScreen
 import org.salvami.app.ui.DownloadsScreen
 import org.salvami.app.ui.GalleryScreen
+import org.salvami.app.ui.ProfilesScreen
 import org.salvami.app.ui.SettingsScreen
 import org.salvami.app.ui.toast
 
 class MainActivity : ComponentActivity() {
-    /** Tab to show; a shared link jumps to the downloads tab. */
+    /** Tab to show; a shared link jumps to the profiles or the downloads tab. */
     private val tab = mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,9 +72,8 @@ class MainActivity : ComponentActivity() {
         if (url == null) {
             toast(this, getString(R.string.invalid_link))
         } else {
-            DownloadService.enqueue(this, url)
-            toast(this, getString(R.string.queued))
-            tab.intValue = 1
+            Profiles.take(this, url)
+            tab.intValue = if (Profiles.parse(url) != null) 1 else 2
         }
         intent.action = Intent.ACTION_MAIN // don't enqueue again on rotation
     }
@@ -98,13 +99,17 @@ class MainActivity : ComponentActivity() {
                     )
                     NavigationBarItem(
                         selected = tab.intValue == 1, onClick = { tab.intValue = 1 },
+                        icon = { Icon(Icons.Default.People, null) }, label = { Text(stringResource(R.string.profiles)) },
+                    )
+                    NavigationBarItem(
+                        selected = tab.intValue == 2, onClick = { tab.intValue = 2 },
                         icon = {
                             BadgedBox(badge = { if (active > 0) Badge { Text(active.toString()) } }) { Icon(Icons.Default.Download, null) }
                         },
                         label = { Text(stringResource(R.string.downloads)) },
                     )
                     NavigationBarItem(
-                        selected = tab.intValue == 2, onClick = { tab.intValue = 2 },
+                        selected = tab.intValue == 3, onClick = { tab.intValue = 3 },
                         icon = { Icon(Icons.Default.Settings, null) }, label = { Text(stringResource(R.string.settings)) },
                     )
                 }
@@ -113,7 +118,8 @@ class MainActivity : ComponentActivity() {
             Box(Modifier.padding(padding).consumeWindowInsets(padding)) {
                 when (tab.intValue) {
                     0 -> GalleryScreen(state) { ids, index -> detailStart = index; detail = ArrayList(ids) }
-                    1 -> DownloadsScreen(state)
+                    1 -> ProfilesScreen(state)
+                    2 -> DownloadsScreen(state)
                     else -> SettingsScreen(state)
                 }
             }

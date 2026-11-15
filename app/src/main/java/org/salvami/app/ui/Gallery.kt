@@ -74,7 +74,7 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.salvami.app.DownloadService
+import org.salvami.app.Profiles
 import org.salvami.app.Downloader
 import org.salvami.app.LibState
 import org.salvami.app.Library
@@ -331,13 +331,12 @@ fun GalleryScreen(state: LibState, onOpen: (ids: List<String>, index: Int) -> Un
 
     pasteDialog?.let { initial ->
         val bad = stringResource(R.string.invalid_link)
-        val queued = stringResource(R.string.queued)
         TextInputDialog(
             title = stringResource(R.string.paste_link), initial = initial, singleLine = false,
             confirm = stringResource(R.string.download),
             onConfirm = { text ->
                 val url = Downloader.firstUrl(text)
-                if (url == null) toast(ctx, bad) else { DownloadService.enqueue(ctx, url); toast(ctx, queued); pasteDialog = null }
+                if (url == null) toast(ctx, bad) else { Profiles.take(ctx, url); pasteDialog = null }
             },
             onDismiss = { pasteDialog = null },
         )
