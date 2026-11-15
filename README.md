@@ -71,7 +71,7 @@ non serve alcun permesso di archiviazione, e vengono rimossi disinstallando l'ap
   Per i siti che yt-dlp non conosce, l'app prova a prendere l'immagine di anteprima della pagina.
 - I siti cambiano spesso: l'app aggiorna yt-dlp da sola una volta al giorno; si può forzare da *Impostazioni → Aggiorna yt-dlp*.
 - FFmpeg non è incluso: audio e video separati vengono uniti con le API di Android (`MediaMuxer`), senza ricodifica.
-  L'APK (circa 20 MB per architettura) contiene Python e yt-dlp; il primo avvio richiede qualche secondo per estrarli.
+  L'APK (circa 15 MB per architettura) contiene yt-dlp e una versione ridotta di Python; il primo avvio richiede qualche secondo per estrarli.
 
 ## Uso responsabile
 
