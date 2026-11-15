@@ -21,6 +21,8 @@ object Downloader {
     private val URL_RE = Regex("""https?://[^\s<>"']+""")
     /** yt-dlp errors after which the page's og:image is the real content (photo posts, unsupported sites). */
     private val PAGE_IMAGE_OK = Regex("no video|unsupported url", RegexOption.IGNORE_CASE)
+    /** yt-dlp found the post but no video in (some of) it: photos, e.g. an Instagram carousel. */
+    private val NO_VIDEO = Regex("no video formats found", RegexOption.IGNORE_CASE)
 
     fun firstUrl(text: String?): String? = text?.let { URL_RE.find(it)?.value }
 
@@ -39,24 +41,21 @@ object Downloader {
             if (ytError == null) {
                 // The service may outlive a day; downloads run one at a time, so this is a safe spot.
                 App.updateYtDlpIfDue(ctx)
-                try {
-                    val req = YoutubeDLRequest(url)
-                    req.addOption("-o", "${tmp.absolutePath}/%(title).60B [%(id)s].%(ext)s")
-                    req.addOption("--restrict-filenames")
-                    req.addOption("--no-playlist")
-                    req.addOption("--playlist-end", "30")
-                    req.addOption("--write-info-json")
-                    req.addOption("--no-mtime")
-                    req.addOption("-S", "ext:mp4:m4a")
-                    YoutubeDL.getInstance().execute(req, jobId) { percent, _, _ -> onProgress((percent / 100f).coerceIn(0f, 1f)) }
-                } catch (e: Throwable) {
-                    Log.w("Salvami", "yt-dlp failed for $url", e)
-                    ytError = e
+                ytError = ytDlp(url, tmp, jobId, photos = false, onProgress)
+                // Photos come as the entries' thumbnails, at full resolution. Ask for them in a second
+                // pass only when needed, or every video would also bring along its cover image.
+                if (ytError != null && NO_VIDEO.containsMatchIn(ytError.message.orEmpty()) && !DownloadService.isCancelled(jobId)) {
+                    val videos = mediaIn(tmp).map { it.nameWithoutExtension }.toSet()
+                    val before = mediaIn(tmp).toSet()
+                    ytDlp(url, tmp, jobId, photos = true, onProgress)
+                    // In a mixed carousel the videos are already there: drop their covers.
+                    (mediaIn(tmp) - before).filter { it.nameWithoutExtension in videos }.forEach { it.delete() }
+                    if (mediaIn(tmp).isNotEmpty()) ytError = null
                 }
             }
             if (DownloadService.isCancelled(jobId)) throw IllegalStateException("cancelled")
 
-            var files: List<File> = tmp.listFiles()?.filter { it.isFile && isMedia(it) }.orEmpty()
+            var files: List<File> = mediaIn(tmp)
             if (files.isEmpty()) {
                 val pageImage = ytError == null || PAGE_IMAGE_OK.containsMatchIn(ytError.message.orEmpty())
                 val direct = runCatching { fallback(url, tmp, pageImage) }.getOrNull()
@@ -75,11 +74,40 @@ object Downloader {
                     sourceUrl = s("webpage_url") ?: url,
                     platform = s("extractor_key") ?: host,
                     username = s("uploader", "channel", "uploader_id") ?: "",
-                    title = s("title") ?: dest.nameWithoutExtension,
+                    // Instagram names every entry "Video by …", photos included.
+                    title = (s("title") ?: dest.nameWithoutExtension)
+                        .let { if (dest.extension.lowercase() in IMAGE_EXT) it.replaceFirst(Regex("^Video by "), "Post by ") else it },
                 )
             }
         } finally {
             tmp.deleteRecursively()
+        }
+    }
+
+    private fun mediaIn(dir: File): List<File> = dir.listFiles()?.filter { it.isFile && isMedia(it) }.orEmpty()
+
+    /** Runs yt-dlp into [dir]; with [photos] it saves each entry's thumbnail instead of the video. Returns the failure, if any. */
+    private fun ytDlp(url: String, dir: File, jobId: String, photos: Boolean, onProgress: (Float) -> Unit): Throwable? {
+        val req = YoutubeDLRequest(url)
+        req.addOption("-o", "${dir.absolutePath}/%(title).60B [%(id)s].%(ext)s")
+        req.addOption("--restrict-filenames")
+        req.addOption("--no-playlist")
+        req.addOption("--playlist-end", "30")
+        req.addOption("--write-info-json")
+        req.addOption("--no-mtime")
+        if (photos) {
+            req.addOption("--ignore-no-formats-error")
+            req.addOption("--skip-download")
+            req.addOption("--write-thumbnail")
+        } else {
+            req.addOption("-S", "ext:mp4:m4a")
+        }
+        return try {
+            YoutubeDL.getInstance().execute(req, jobId) { percent, _, _ -> onProgress((percent / 100f).coerceIn(0f, 1f)) }
+            null
+        } catch (e: Throwable) {
+            Log.w("Salvami", "yt-dlp failed for $url (photos=$photos)", e)
+            e
         }
     }
 
