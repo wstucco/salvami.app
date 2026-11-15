@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -69,7 +71,7 @@ fun ProfilesScreen(state: LibState) {
         }
         LazyColumn(Modifier.padding(padding).fillMaxSize()) {
             if (platforms.size > 1) item {
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp)) {
                     FilterChip(selected = platform == null, onClick = { platform = null }, label = { Text(stringResource(R.string.filter_all)) })
                     platforms.forEach { p ->
                         Spacer(Modifier.width(8.dp))
