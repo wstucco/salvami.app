@@ -26,7 +26,7 @@ android {
         targetSdk = 35
         // CI passes the run number, so every published build can update the previous one.
         versionCode = System.getenv("SALVAMI_VERSION_CODE")?.toIntOrNull() ?: 1
-        versionName = System.getenv("SALVAMI_VERSION_NAME") ?: "1.0.0"
+        versionName = System.getenv("SALVAMI_VERSION_NAME") ?: "0.1.0-dev"
     }
     // Release signing comes from the environment (GitHub secrets in CI); without it, the debug key.
     val keystore = System.getenv("SALVAMI_KEYSTORE")
