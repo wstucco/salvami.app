@@ -69,7 +69,7 @@
     <string name="status_completed_n">Completato (%d)</string>
     <string name="status_failed">Non riuscito</string>
     <string name="backup">Backup</string>
-    <string name="backup_help">Esporta media, tag, note e cronologia dei download in un unico archivio, da ripristinare su questo o su un altro dispositivo.</string>
+    <string name="backup_help">Oppure esporta tutto in un unico archivio zip, da ripristinare su questo o su un altro dispositivo.</string>
     <string name="export_backup">Esporta</string>
     <string name="restore_backup">Ripristina</string>
     <string name="exported_n">File esportati: %d</string>
@@ -86,4 +86,7 @@
     <string name="open_profile">Apri profilo</string>
     <string name="refresh">Aggiorna</string>
     <string name="delete_profile_confirm">Rimuovere %1$s dai profili salvati?</string>
+    <string name="library_folder_help">La libreria (media, tag, note, cronologia, profili) si trova in %1$s: fai copiare quella cartella alla tua app di backup o sincronizzazione. Android la cancella quando Salvami viene disinstallata.</string>
+    <string name="restore_folder">Ripristina da una copia della cartella</string>
+    <string name="show_in_gallery">Mostra i download nella galleria del telefono</string>
 </resources>

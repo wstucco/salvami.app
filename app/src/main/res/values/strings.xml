@@ -70,7 +70,7 @@
     <string name="status_completed_n">Completed (%d)</string>
     <string name="status_failed">Failed</string>
     <string name="backup">Backup</string>
-    <string name="backup_help">Export media, tags, memos and download history to a single archive, and restore it on this or another device.</string>
+    <string name="backup_help">Or export everything to a single zip archive, and restore it on this or another device.</string>
     <string name="export_backup">Export</string>
     <string name="restore_backup">Restore</string>
     <string name="exported_n">Exported files: %d</string>
@@ -87,4 +87,7 @@
     <string name="open_profile">Open profile</string>
     <string name="refresh">Refresh</string>
     <string name="delete_profile_confirm">Remove %1$s from saved profiles?</string>
+    <string name="library_folder_help">Your library (media, tags, memos, history, profiles) is kept in %1$s: point your backup or sync app at that folder. Android deletes it when Salvami is uninstalled.</string>
+    <string name="restore_folder">Restore from a folder copy</string>
+    <string name="show_in_gallery">Show downloads in the phone\'s gallery</string>
 </resources>

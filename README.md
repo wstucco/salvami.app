@@ -26,7 +26,8 @@ Il download è affidato a [yt-dlp](https://github.com/yt-dlp/yt-dlp), incluso ne
 - **Profili**: condividendo il link di un profilo (Instagram, TikTok, X, YouTube, Facebook) lo si salva
   in una sezione apposita, con nome e foto, invece di scaricarne i contenuti
 - **Account**: accesso dalla pagina di login del sito, per i contenuti privati; la sessione resta sul telefono
-- **Backup e ripristino**: un unico archivio `.zip` con media, tag, note, cronologia e profili
+- **Backup**: la libreria sta in una cartella visibile (`Android/media/org.salvami.app`) che un'app di backup
+  o sincronizzazione può copiare, e si ripristina da quella copia; in alternativa, un unico archivio `.zip`
 - Tema chiaro/scuro di sistema (colori dinamici da Android 12), italiano e inglese
 
 ### Rispetto a SHARE2me, mancano
@@ -84,8 +85,20 @@ la chiave va conservata con cura, perché senza di essa non si possono più pubb
 | `MainActivity.kt` | Ricezione dei link condivisi, navigazione, tema |
 | `ui/` | Interfaccia in Jetpack Compose: galleria, dettaglio, profili, download, impostazioni |
 
-I file scaricati stanno nella cartella privata dell'app (`Android/data/org.salvami.app/files/media`):
-non serve alcun permesso di archiviazione, e vengono rimossi disinstallando l'app (fai prima un backup).
+Tutta la libreria sta in `Android/media/org.salvami.app/`, che non richiede permessi e, a differenza
+di `Android/data`, è leggibile da file manager e app di backup (Syncthing, FolderSync, …):
+
+```
+library.json   tag, preferiti, note, cronologia, profili
+media/         foto e video
+avatars/       foto dei profili
+.nomedia       tiene i download fuori dalla galleria di sistema (Impostazioni → Mostra nella galleria)
+```
+
+Android cancella la cartella quando l'app viene disinstallata: fanne copiare il contenuto a un'app di backup
+e, dopo una reinstallazione, usa *Impostazioni → Ripristina da una copia della cartella*. Le sessioni degli
+account restano invece nella memoria privata dell'app. Le versioni 0.1 tenevano i dati in `Android/data`:
+vengono spostati automaticamente al primo avvio.
 
 ## Limiti noti
 

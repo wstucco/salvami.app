@@ -27,6 +27,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -153,6 +154,10 @@ fun SettingsScreen(state: LibState) {
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) task { restored.format(Backup.restore(ctx, uri)) }
     }
+    val restoreFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) task { restored.format(Backup.restoreFolder(ctx, uri)) }
+    }
+    var showInGallery by remember { mutableStateOf(Library.showInGallery()) }
 
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.settings)) }) }) { padding ->
         Column(
@@ -162,6 +167,18 @@ fun SettingsScreen(state: LibState) {
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
 
             Text(stringResource(R.string.backup), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.library_folder_help, Library.root.path.substringAfter("/storage/emulated/0/")),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(enabled = !busy, onClick = { restoreFolderLauncher.launch(null) }) { Text(stringResource(R.string.restore_folder)) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.show_in_gallery), Modifier.weight(1f))
+                Switch(checked = showInGallery, onCheckedChange = { on ->
+                    showInGallery = on
+                    scope.launch(Dispatchers.IO) { Library.setShowInGallery(ctx, on) }
+                })
+            }
             Text(stringResource(R.string.backup_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(enabled = !busy, onClick = {
