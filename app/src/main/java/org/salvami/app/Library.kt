@@ -1,6 +1,9 @@
 package org.salvami.app
 
 import android.content.Context
+import android.media.MediaScannerConnection
+import android.os.Environment
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.updateAndGet
@@ -57,6 +60,12 @@ object Library {
     val state: StateFlow<LibState> = _state
 
     private var file: File? = null
+    /**
+     * Where everything lives: Android/media/<package>. It needs no permission and, unlike
+     * Android/data, file managers and sync/backup apps can read it. Android deletes it on uninstall.
+     */
+    lateinit var root: File
+        private set
     lateinit var mediaDir: File
         private set
     lateinit var avatarDir: File
@@ -68,15 +77,56 @@ object Library {
     @Synchronized
     fun init(ctx: Context) {
         if (file != null) return
-        mediaDir = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "media").apply { mkdirs() }
-        avatarDir = File(mediaDir.parentFile, "avatars").apply { mkdirs() }
-        val f = File(ctx.filesDir, "library.json")
+        @Suppress("DEPRECATION") // still the only permission-free app folder that other apps can see
+        val shared = ctx.externalMediaDirs.firstOrNull()?.takeIf { Environment.getExternalStorageState(it) == Environment.MEDIA_MOUNTED }
+        root = (shared ?: ctx.getExternalFilesDir(null) ?: ctx.filesDir).apply { mkdirs() }
+        mediaDir = File(root, "media").apply { mkdirs() }
+        avatarDir = File(root, "avatars").apply { mkdirs() }
+        val f = File(root, "library.json")
         file = f
+        // Downloads stay out of the phone's gallery unless the user asks otherwise.
+        if (!f.exists()) runCatching { nomedia().createNewFile() }
+        migrate(ctx, f)
         val loaded = runCatching { fromJson(JSONObject(f.readText())) }.getOrDefault(LibState())
         // Anything still "in progress" belongs to a process that died.
         _state.value = loaded.copy(history = loaded.history.map {
             if (it.status == Status.PENDING || it.status == Status.RUNNING) it.copy(status = Status.FAILED, message = "interrupted") else it
         })
+    }
+
+    /** Up to 0.1 media sat in Android/data and library.json in internal storage, out of reach of backup apps. */
+    private fun migrate(ctx: Context, target: File) {
+        val oldJson = File(ctx.filesDir, "library.json")
+        if (!oldJson.isFile || oldJson == target) return
+        val oldRoot = ctx.getExternalFilesDir(null)
+        if (oldRoot != null && oldRoot != root) {
+            for (dir in listOf("media", "avatars")) {
+                File(oldRoot, dir).listFiles()?.forEach { moveFile(it, File(root, "$dir/${it.name}")) }
+            }
+        }
+        // Last, so an interrupted migration resumes on the next start.
+        moveFile(oldJson, target)
+        Log.i("Salvami", "library moved to $root")
+    }
+
+    /** Rename when possible, else copy; [dest] only ever appears complete, so an existing one means already moved. */
+    private fun moveFile(src: File, dest: File) {
+        if (dest.exists()) { src.delete(); return }
+        if (src.renameTo(dest)) return
+        val part = File(dest.path + ".part")
+        src.copyTo(part, overwrite = true)
+        if (part.renameTo(dest)) src.delete()
+    }
+
+    private fun nomedia() = File(root, ".nomedia")
+
+    fun showInGallery() = !nomedia().exists()
+
+    fun setShowInGallery(ctx: Context, show: Boolean) {
+        if (show) nomedia().delete() else nomedia().createNewFile()
+        // Have the gallery pick the files up (or drop them) now rather than at its next scan.
+        val paths = mediaDir.listFiles().orEmpty().map { it.path }.toTypedArray()
+        if (paths.isNotEmpty()) MediaScannerConnection.scanFile(ctx, paths, null, null)
     }
 
     fun update(f: (LibState) -> LibState) {
